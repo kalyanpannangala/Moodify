@@ -8,29 +8,19 @@ type PredictionResult = {
 };
 
 const moodEmojis: Record<string, string> = {
-
-  positive: "😄",   // for "positive" moods
+  positive: "😄",
   negative: "😢",
   "mildly positive": "🙂",
   "mildly negative": "🙁",
-   neutral: "😐"
-  
-  
+  neutral: "😐"
 };
 
 const moodColors: Record<string, string> = {
-  happy: "from-yellow-300 to-yellow-500",
-  sad: "from-blue-300 to-blue-500",
-  angry: "from-red-400 to-red-600",
-  anxious: "from-purple-400 to-purple-600",
-  excited: "from-orange-300 to-orange-500",
-  relaxed: "from-green-300 to-green-500",
+  "mildly positive": "from-yellow-300 to-yellow-500",
+  "mildly negative": "from-blue-300 to-blue-500",
+  positive: "from-green-300 to-green-500",
+  negative: "from-red-300 to-red-500",
   neutral: "from-gray-300 to-gray-500",
-  surprised: "from-pink-300 to-pink-500",
-  tired: "from-indigo-300 to-indigo-500",
-  loved: "from-rose-300 to-rose-500",
-  playful: "from-cyan-300 to-cyan-500",
-  confident: "from-teal-300 to-teal-500",
 };
 
 export default function Home() {
@@ -59,13 +49,37 @@ export default function Home() {
         body: JSON.stringify({ text }),
       });
 
-      if (!res.ok) throw new Error("Failed to analyze mood");
+      // Handle HTTP errors
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Backend error: ${res.status} - ${errorText || res.statusText}`);
+      }
 
-      const data: PredictionResult = await res.json();
-      setResult(data);
-    } catch (err) {
-      console.error(err);
-      setError("Something went wrong. Please try again.");
+      const data = await res.json();
+      
+      // Validate backend response structure
+      if (!data.mood || data.prediction === undefined) {
+        console.error("Backend response:", data);
+        throw new Error("Unexpected response format from backend");
+      }
+      
+      // Convert prediction to score (0-4 to 0-1 scale)
+      const score = typeof data.prediction === 'number' 
+        ? data.prediction / 4 
+        : parseFloat(data.prediction) / 4;
+      
+      if (isNaN(score)) {
+        throw new Error("Invalid prediction value");
+      }
+
+      setResult({
+        mood: data.mood.toLowerCase(),
+        score
+      });
+      
+    } catch (err: any) {
+      console.error("Prediction error:", err);
+      setError(err.message || "Something went wrong while predicting mood. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -108,7 +122,7 @@ export default function Home() {
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
           >
-            <span className="inline-block transform rotate-12">🎵</span> Moodify Premium <span className="inline-block transform -rotate-12">🎧</span>
+            <span className="inline-block transform rotate-12">🎵</span> Moodify <span className="inline-block transform -rotate-12">🎧</span>
           </motion.h1>
           <p className="text-lg text-gray-700">
             Advanced mood analysis powered by machine learning
@@ -193,6 +207,15 @@ export default function Home() {
               className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 text-center"
             >
               {error}
+              <div className="mt-2">
+                <motion.button
+                  onClick={resetForm}
+                  whileHover={{ scale: 1.05 }}
+                  className="text-blue-600 hover:underline font-medium"
+                >
+                  Try again
+                </motion.button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -207,7 +230,6 @@ export default function Home() {
               className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl p-6 md:p-8 border border-white/50 overflow-hidden"
             >
               <div className="text-center">
-
                 <motion.div
                   className="text-8xl mb-4"
                   animate={{
@@ -230,7 +252,7 @@ export default function Home() {
                   </span>
                 </h2>
 
-                <div className="w-full bg-gray-200 rounded-full h-4 mb-6 mt-4 overflow-hidden text">
+                <div className="w-full bg-gray-200 rounded-full h-4 mb-6 mt-4 overflow-hidden">
                   <motion.div
                     className="bg-gradient-to-r from-purple-500 to-blue-400 h-4 rounded-full"
                     initial={{ width: "0%" }}
@@ -257,7 +279,7 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {!result && !loading && (
+        {!result && !loading && !error && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -290,12 +312,22 @@ export default function Home() {
       </div>
 
       <motion.footer
-        className="mt-8 text-gray-600 text-sm"
+        className="mt-8 text-gray-600 text-sm text-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2 }}
       >
-        Powered by Machine Learning | Moodify Premium © 2023
+        Developed by{' '} 
+        <a
+            href="https://github.com/kalyanpannangala/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-700 hover:text-blue-900 font-semibold transition"
+            style={{ textDecoration: 'none' }}
+        >
+            Kalyan Pannangala
+        </a>
+           | Moodify © 2025
       </motion.footer>
     </motion.div>
   );
