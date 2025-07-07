@@ -77,9 +77,18 @@ export default function Home() {
         score
       });
       
-    } catch (err: any) {
+    } catch (err) {
       console.error("Prediction error:", err);
-      setError(err.message || "Something went wrong while predicting mood. Please try again.");
+      
+      let errorMessage = "Something went wrong while predicting mood. Please try again.";
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "string") {
+        errorMessage = err;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
