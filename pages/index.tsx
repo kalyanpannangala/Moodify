@@ -53,7 +53,7 @@ export default function Home() {
     setResult(null);
 
     try {
-      const res = await fetch("http://localhost:8000/predict", {
+      const res = await fetch("https://moodify-backend-1dm4.onrender.com/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
